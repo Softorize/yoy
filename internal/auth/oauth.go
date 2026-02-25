@@ -2,9 +2,16 @@ package auth
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -22,7 +29,7 @@ var (
 	oauthClientSecret = ""
 )
 
-const redirectURI = "http://localhost:%d"
+const redirectURI = "https://localhost:%d"
 
 // Yahoo OAuth2 endpoints.
 var yahooEndpoint = oauth2.Endpoint{
@@ -31,9 +38,11 @@ var yahooEndpoint = oauth2.Endpoint{
 }
 
 // Yahoo OAuth2 scopes.
+// Yahoo no longer grants mail-r/mail-w to new apps, but IMAP XOAUTH2
+// works with a valid token regardless of scope. We use OpenID Connect
+// scopes to obtain the token.
 const (
-	ScopeMailRead  = "mail-r"
-	ScopeMailWrite = "mail-w"
+	ScopeOpenID = "openid"
 )
 
 // resolveCredentials returns the OAuth client ID and secret.
@@ -70,7 +79,7 @@ func OAuthConfig(port int) (*oauth2.Config, error) {
 		ClientID:     id,
 		ClientSecret: secret,
 		RedirectURL:  fmt.Sprintf(redirectURI, port),
-		Scopes:       []string{ScopeMailRead, ScopeMailWrite},
+		Scopes:       []string{ScopeOpenID},
 		Endpoint:     yahooEndpoint,
 	}, nil
 }
@@ -112,7 +121,14 @@ func BrowserLogin(port int) (*oauth2.Token, error) {
 		codeCh <- code
 	})
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	tlsCert, err := selfSignedCert()
+	if err != nil {
+		return nil, fmt.Errorf("generating TLS certificate: %w", err)
+	}
+
+	listener, err := tls.Listen("tcp", fmt.Sprintf(":%d", port), &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("starting callback server on port %d: %w", port, err)
 	}
@@ -150,6 +166,38 @@ func randomState() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+func selfSignedCert() (tls.Certificate, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "localhost"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(1 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		DNSNames:     []string{"localhost"},
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+
+	return tls.X509KeyPair(certPEM, keyPEM)
 }
 
 func openBrowser(url string) error {
