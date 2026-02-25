@@ -53,7 +53,12 @@ yoy version
 yoy auth login --email yourname@yahoo.com
 ```
 
-This opens your default browser. Sign in to Yahoo and authorize the app. Once approved, you'll see "Authentication successful!" in the browser and the CLI confirms:
+This opens your default browser for Yahoo OAuth2 login.
+
+> **Note: Browser security warning**
+> During login, you'll see a "Your connection is not private" warning. This is expected — YOY runs a local HTTPS callback server with a temporary self-signed certificate (required because Yahoo only allows HTTPS redirect URIs). Click **Advanced** → **Proceed to localhost (unsafe)** to complete authentication. This is safe — the server only runs on your machine for the duration of the login.
+
+Once you sign in to Yahoo and authorize the app, you'll see "Authentication successful!" in the browser and the CLI confirms:
 
 ```
 Opening browser for Yahoo authentication...
