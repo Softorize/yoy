@@ -15,11 +15,34 @@ Built with Go. Inspired by [GAC](https://github.com/Softorize/gac) and [GOG CLI]
 
 ## Installation
 
-### GitHub Releases (recommended)
+No credentials or secrets are needed — both options work out of the box.
 
-Download a prebuilt binary from [GitHub Releases](https://github.com/Softorize/yoy/releases). Works out of the box.
+### Option 1: Download Binary (recommended)
 
-### From Source
+Grab a prebuilt binary from [GitHub Releases](https://github.com/Softorize/yoy/releases) — no build tools required:
+
+```bash
+# macOS (Apple Silicon)
+curl -LO https://github.com/Softorize/yoy/releases/latest/download/yoy_0.1.1_darwin_arm64.tar.gz
+tar xzf yoy_0.1.1_darwin_arm64.tar.gz
+sudo cp yoy /usr/local/bin/
+
+# macOS (Intel)
+curl -LO https://github.com/Softorize/yoy/releases/latest/download/yoy_0.1.1_darwin_amd64.tar.gz
+tar xzf yoy_0.1.1_darwin_amd64.tar.gz
+sudo cp yoy /usr/local/bin/
+
+# Linux (amd64)
+curl -LO https://github.com/Softorize/yoy/releases/latest/download/yoy_0.1.1_linux_amd64.tar.gz
+tar xzf yoy_0.1.1_linux_amd64.tar.gz
+sudo cp yoy /usr/local/bin/
+```
+
+Binaries are available for macOS, Linux, and Windows (amd64 + arm64).
+
+### Option 2: Build from Source
+
+Requires [Go 1.25+](https://go.dev/dl/):
 
 ```bash
 git clone https://github.com/Softorize/yoy.git
@@ -32,7 +55,7 @@ sudo cp bin/yoy /usr/local/bin/
 
 ```bash
 yoy version
-# yoy v0.1.0 (commit: abc1234, built: 2026-02-25T00:00:00Z)
+# yoy v0.1.1 (commit: abc1234, built: 2026-02-25T00:00:00Z)
 ```
 
 ## Quick Start
@@ -434,6 +457,8 @@ For convenience, these top-level aliases are available:
 | `yoy search` | `yoy mail search` |
 
 ## Building from Source
+
+No credentials or secrets needed — just clone and build:
 
 ```bash
 git clone https://github.com/Softorize/yoy.git
