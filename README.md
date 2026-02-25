@@ -15,19 +15,27 @@ Built with Go. Inspired by [GAC](https://github.com/Softorize/gac).
 
 ## Installation
 
-### From Source (recommended)
+### GitHub Releases (recommended)
+
+Download a prebuilt binary from [GitHub Releases](https://github.com/Softorize/yoy/releases). These include OAuth credentials and work out of the box.
+
+### From Source
+
+Building from source requires your own Yahoo OAuth2 credentials (see [Yahoo Developer Console](https://developer.yahoo.com/apps/)):
 
 ```bash
 git clone https://github.com/Softorize/yoy.git
 cd yoy
+export YOY_CLIENT_ID=your-client-id
+export YOY_CLIENT_SECRET=your-client-secret
 make build
 sudo cp bin/yoy /usr/local/bin/
 ```
 
-### Using Go Install
+Or pass them directly via ldflags:
 
 ```bash
-go install github.com/Softorize/yoy@latest
+go build -ldflags "-X github.com/Softorize/yoy/internal/auth.oauthClientID=YOUR_ID -X github.com/Softorize/yoy/internal/auth.oauthClientSecret=YOUR_SECRET" .
 ```
 
 ### Verify Installation
@@ -443,9 +451,16 @@ For convenience, these top-level aliases are available:
 
 ## Building from Source
 
+Building from source requires your own Yahoo OAuth2 credentials. Set them as environment variables before building:
+
 ```bash
-git clone https://github.com/Softorize/yoy.git
-cd yoy
+export YOY_CLIENT_ID=your-client-id
+export YOY_CLIENT_SECRET=your-client-secret
+```
+
+Then use Make targets:
+
+```bash
 make build       # Build to bin/yoy
 make install     # Install to $GOPATH/bin
 make test        # Run tests
@@ -454,6 +469,8 @@ make fmt         # Format code
 make clean       # Remove build artifacts
 make all         # Format + vet + test + build
 ```
+
+Release binaries from [GitHub Releases](https://github.com/Softorize/yoy/releases) include credentials and work out of the box.
 
 ## Technical Details
 
