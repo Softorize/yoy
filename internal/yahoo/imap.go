@@ -23,9 +23,9 @@ type IMAPClient struct {
 
 // NewIMAPClient creates and authenticates a new IMAP connection to Yahoo Mail.
 func NewIMAPClient(ctx context.Context, email string) (*IMAPClient, error) {
-	accessToken, err := auth.GetAccessToken(ctx)
+	creds, err := auth.LoadCredentials()
 	if err != nil {
-		return nil, yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
+		return nil, yoyerrors.Wrap("loading credentials", err, yoyerrors.ExitAuth).
 			WithHint("Run 'yoy auth login' to authenticate.")
 	}
 
@@ -36,11 +36,26 @@ func NewIMAPClient(ctx context.Context, email string) (*IMAPClient, error) {
 			WithHint("Check your internet connection and try again.")
 	}
 
-	saslClient := auth.NewXOAuth2Client(email, accessToken)
-	if err := c.Authenticate(saslClient); err != nil {
-		c.Close()
-		return nil, yoyerrors.Wrap("IMAP authentication failed", err, yoyerrors.ExitAuth).
-			WithHint("Run 'yoy auth login' to re-authenticate.")
+	switch creds.Method {
+	case auth.AuthMethodAppPassword:
+		if err := c.Login(email, creds.AppPassword).Wait(); err != nil {
+			c.Close()
+			return nil, yoyerrors.Wrap("IMAP login failed", err, yoyerrors.ExitAuth).
+				WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
+		}
+	default:
+		accessToken, err := auth.GetAccessToken(ctx)
+		if err != nil {
+			c.Close()
+			return nil, yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
+				WithHint("Run 'yoy auth login' to re-authenticate.")
+		}
+		saslClient := auth.NewXOAuth2Client(email, accessToken)
+		if err := c.Authenticate(saslClient); err != nil {
+			c.Close()
+			return nil, yoyerrors.Wrap("IMAP authentication failed", err, yoyerrors.ExitAuth).
+				WithHint("Run 'yoy auth login' to re-authenticate.")
+		}
 	}
 
 	return &IMAPClient{client: c, email: email}, nil
@@ -352,11 +367,11 @@ func messageFromFetchData(msg *imapclient.FetchMessageData) Message {
 		switch data := item.(type) {
 		case imapclient.FetchItemDataUID:
 			m.UID = uint32(data.UID)
-		case *imapclient.FetchItemDataFlags:
+		case imapclient.FetchItemDataFlags:
 			m.Flags = flagsToStrings(data.Flags)
 			m.Seen = containsFlag(data.Flags, imap.FlagSeen)
 			m.Flagged = containsFlag(data.Flags, imap.FlagFlagged)
-		case *imapclient.FetchItemDataEnvelope:
+		case imapclient.FetchItemDataEnvelope:
 			env := data.Envelope
 			if env == nil {
 				continue
@@ -374,7 +389,7 @@ func messageFromFetchData(msg *imapclient.FetchMessageData) Message {
 			m.To = envelopeAddresses(env.To)
 			m.Cc = envelopeAddresses(env.Cc)
 			m.ReplyTo = envelopeAddresses(env.ReplyTo)
-		case *imapclient.FetchItemDataBodySection:
+		case imapclient.FetchItemDataBodySection:
 			body, err := io.ReadAll(data.Literal)
 			if err != nil {
 				continue
