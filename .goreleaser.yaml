@@ -1,0 +1,56 @@
+version: 2
+
+project_name: yoy
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: yoy
+    main: .
+    binary: yoy
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/Softorize/yoy/internal/version.Version={{.Version}}
+      - -X github.com/Softorize/yoy/internal/version.Commit={{.Commit}}
+      - -X github.com/Softorize/yoy/internal/version.BuildDate={{.Date}}
+      - -X github.com/Softorize/yoy/internal/auth.oauthClientID={{ .Env.YOY_CLIENT_ID }}
+      - -X github.com/Softorize/yoy/internal/auth.oauthClientSecret={{ .Env.YOY_CLIENT_SECRET }}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  github:
+    owner: Softorize
+    name: yoy
