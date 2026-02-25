@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/Softorize/yoy/internal/auth"
 	"github.com/Softorize/yoy/internal/config"
@@ -14,27 +13,19 @@ import (
 
 // AuthCmd groups all authentication subcommands.
 type AuthCmd struct {
-	Login  AuthLoginCmd  `cmd:"" help:"Authenticate with Yahoo (OAuth2 or app password)."`
+	Login  AuthLoginCmd  `cmd:"" help:"Authenticate with Yahoo using an app password."`
 	Logout AuthLogoutCmd `cmd:"" help:"Remove stored credentials."`
 	Status AuthStatusCmd `cmd:"" help:"Show current authentication status."`
 }
 
-// AuthLoginCmd performs authentication via OAuth2 or app password.
+// AuthLoginCmd performs authentication via app password.
 type AuthLoginCmd struct {
-	Port        int    `help:"Local port for OAuth callback." default:"8086"`
 	Email       string `help:"Yahoo email address." required:""`
-	AppPassword string `help:"Yahoo app password (skip OAuth, use IMAP/SMTP login)." name:"app-password"`
+	AppPassword string `help:"Yahoo app password for IMAP/SMTP login." name:"app-password" required:""`
 }
 
 // Run executes the login flow.
 func (c *AuthLoginCmd) Run(ctx *Context) error {
-	if c.AppPassword != "" {
-		return c.runAppPassword(ctx)
-	}
-	return c.runOAuth(ctx)
-}
-
-func (c *AuthLoginCmd) runAppPassword(ctx *Context) error {
 	if err := auth.StoreAppPassword(c.AppPassword); err != nil {
 		return fmt.Errorf("storing app password: %w", err)
 	}
@@ -57,35 +48,12 @@ func (c *AuthLoginCmd) runAppPassword(ctx *Context) error {
 	return nil
 }
 
-func (c *AuthLoginCmd) runOAuth(ctx *Context) error {
-	fmt.Println("Opening browser for Yahoo authentication...")
-
-	token, err := auth.BrowserLogin(c.Port)
-	if err != nil {
-		return fmt.Errorf("login failed: %w", err)
-	}
-
-	if err := auth.StoreToken(token); err != nil {
-		return fmt.Errorf("storing token: %w", err)
-	}
-
-	if err := storeEmail(c.Email); err != nil {
-		return fmt.Errorf("storing email: %w", err)
-	}
-
-	fmt.Println("Authentication successful.")
-	return nil
-}
-
 // AuthLogoutCmd removes stored credentials.
 type AuthLogoutCmd struct{}
 
-// Run removes stored tokens.
+// Run removes stored credentials.
 func (c *AuthLogoutCmd) Run(ctx *Context) error {
 	auth.RemoveAppPassword()
-	if err := auth.RemoveToken(); err != nil {
-		return fmt.Errorf("logout failed: %w", err)
-	}
 	_ = removeEmail()
 	fmt.Println("Logged out successfully.")
 	return nil
@@ -96,10 +64,10 @@ type AuthStatusCmd struct{}
 
 // Run checks and displays the auth status.
 func (c *AuthStatusCmd) Run(ctx *Context) error {
-	creds, err := auth.LoadCredentials()
+	_, err := auth.LoadCredentials()
 	if err != nil {
 		fmt.Println("Status: not authenticated")
-		fmt.Println("Run 'yoy auth login --email your@yahoo.com' to authenticate.")
+		fmt.Println("Run 'yoy auth login --email your@yahoo.com --app-password YOUR_APP_PASSWORD' to authenticate.")
 		return nil
 	}
 
@@ -109,23 +77,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	if email != "" {
 		fmt.Printf("Email:  %s\n", email)
 	}
-
-	if creds.Method == auth.AuthMethodAppPassword {
-		fmt.Println("Method: app password")
-	} else {
-		fmt.Println("Method: OAuth2")
-		token, err := auth.LoadToken()
-		if err == nil {
-			if token.Expiry.IsZero() {
-				fmt.Println("Expiry: none (non-expiring token)")
-			} else if token.Expiry.Before(time.Now()) {
-				fmt.Printf("Expiry: %s (expired, will auto-refresh)\n", token.Expiry.Format(time.RFC3339))
-			} else {
-				fmt.Printf("Expiry: %s\n", token.Expiry.Format(time.RFC3339))
-			}
-			fmt.Printf("Type:   %s\n", token.TokenType)
-		}
-	}
+	fmt.Println("Method: app password")
 
 	return nil
 }

@@ -1,13 +1,10 @@
 package yahoo
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/smtp"
-
-	"github.com/emersion/go-sasl"
 
 	"github.com/Softorize/yoy/internal/auth"
 	"github.com/Softorize/yoy/internal/config"
@@ -15,7 +12,7 @@ import (
 )
 
 // SendMail sends an email via Yahoo's SMTP server.
-func SendMail(ctx context.Context, email string, opts *SendOptions) error {
+func SendMail(email string, opts *SendOptions) error {
 	creds, err := auth.LoadCredentials()
 	if err != nil {
 		return yoyerrors.Wrap("loading credentials", err, yoyerrors.ExitAuth).
@@ -49,25 +46,11 @@ func SendMail(ctx context.Context, email string, opts *SendOptions) error {
 	}
 	defer c.Close()
 
-	// Authenticate based on stored method.
-	switch creds.Method {
-	case auth.AuthMethodAppPassword:
-		plainAuth := smtp.PlainAuth("", email, creds.AppPassword, config.DefaultSMTPHost)
-		if err := c.Auth(plainAuth); err != nil {
-			return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
-				WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
-		}
-	default:
-		accessToken, err := auth.GetAccessToken(ctx)
-		if err != nil {
-			return yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
-				WithHint("Run 'yoy auth login' to re-authenticate.")
-		}
-		xoauth2Client := auth.NewXOAuth2Client(email, accessToken)
-		if err := c.Auth(saslToSMTPAuth(xoauth2Client)); err != nil {
-			return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
-				WithHint("Run 'yoy auth login' to re-authenticate.")
-		}
+	// Authenticate with app password.
+	plainAuth := smtp.PlainAuth("", email, creds.AppPassword, config.DefaultSMTPHost)
+	if err := c.Auth(plainAuth); err != nil {
+		return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
+			WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
 	}
 
 	// Set sender.
@@ -103,24 +86,4 @@ func SendMail(ctx context.Context, email string, opts *SendOptions) error {
 	}
 
 	return c.Quit()
-}
-
-// saslToSMTPAuth adapts a go-sasl Client to net/smtp.Auth.
-type saslSMTPAuth struct {
-	client sasl.Client
-}
-
-func saslToSMTPAuth(client sasl.Client) smtp.Auth {
-	return &saslSMTPAuth{client: client}
-}
-
-func (a *saslSMTPAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
-	return a.client.Start()
-}
-
-func (a *saslSMTPAuth) Next(fromServer []byte, more bool) ([]byte, error) {
-	if !more {
-		return nil, nil
-	}
-	return a.client.Next(fromServer)
 }

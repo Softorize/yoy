@@ -11,27 +11,16 @@ import (
 	"github.com/Softorize/yoy/internal/config"
 )
 
-// AuthMethod represents the authentication method used.
-type AuthMethod string
-
-const (
-	AuthMethodOAuth       AuthMethod = "oauth"
-	AuthMethodAppPassword AuthMethod = "app_password"
-)
-
-const authMethodKey = "auth_method"
 const appPasswordKey = "app_password"
 
 // StoredCredentials holds the current auth configuration.
 type StoredCredentials struct {
-	Method      AuthMethod `json:"method"`
-	AppPassword string     `json:"app_password,omitempty"`
+	AppPassword string `json:"app_password,omitempty"`
 }
 
 // StoreAppPassword saves an app password for IMAP/SMTP plain auth.
 func StoreAppPassword(password string) error {
 	data, _ := json.Marshal(StoredCredentials{
-		Method:      AuthMethodAppPassword,
 		AppPassword: password,
 	})
 
@@ -51,7 +40,7 @@ func StoreAppPassword(password string) error {
 	return os.WriteFile(credFilePath(), data, 0600)
 }
 
-// LoadCredentials loads the stored credentials and returns the auth method.
+// LoadCredentials loads the stored credentials.
 func LoadCredentials() (*StoredCredentials, error) {
 	kr, err := openKeyring()
 	if err == nil {
@@ -71,12 +60,6 @@ func LoadCredentials() (*StoredCredentials, error) {
 		if err := json.Unmarshal(data, &creds); err == nil {
 			return &creds, nil
 		}
-	}
-
-	// No app password stored; check for OAuth token
-	_, err = LoadToken()
-	if err == nil {
-		return &StoredCredentials{Method: AuthMethodOAuth}, nil
 	}
 
 	return nil, fmt.Errorf("no credentials stored")

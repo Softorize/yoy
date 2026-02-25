@@ -31,7 +31,7 @@ func (c *SendCmd) Run(ctx *Context) error {
 		Body:    c.Body,
 	}
 
-	if err := yahoo.SendMail(ctx.ctx, email, opts); err != nil {
+	if err := yahoo.SendMail(email, opts); err != nil {
 		return err
 	}
 

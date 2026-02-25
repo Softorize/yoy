@@ -36,26 +36,10 @@ func NewIMAPClient(ctx context.Context, email string) (*IMAPClient, error) {
 			WithHint("Check your internet connection and try again.")
 	}
 
-	switch creds.Method {
-	case auth.AuthMethodAppPassword:
-		if err := c.Login(email, creds.AppPassword).Wait(); err != nil {
-			c.Close()
-			return nil, yoyerrors.Wrap("IMAP login failed", err, yoyerrors.ExitAuth).
-				WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
-		}
-	default:
-		accessToken, err := auth.GetAccessToken(ctx)
-		if err != nil {
-			c.Close()
-			return nil, yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
-				WithHint("Run 'yoy auth login' to re-authenticate.")
-		}
-		saslClient := auth.NewXOAuth2Client(email, accessToken)
-		if err := c.Authenticate(saslClient); err != nil {
-			c.Close()
-			return nil, yoyerrors.Wrap("IMAP authentication failed", err, yoyerrors.ExitAuth).
-				WithHint("Run 'yoy auth login' to re-authenticate.")
-		}
+	if err := c.Login(email, creds.AppPassword).Wait(); err != nil {
+		c.Close()
+		return nil, yoyerrors.Wrap("IMAP login failed", err, yoyerrors.ExitAuth).
+			WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
 	}
 
 	return &IMAPClient{client: c, email: email}, nil

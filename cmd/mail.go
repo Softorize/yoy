@@ -278,7 +278,7 @@ func (c *MailReplyCmd) Run(ctx *Context) error {
 		Headers: headers,
 	}
 
-	if err := yahoo.SendMail(ctx.ctx, email, opts); err != nil {
+	if err := yahoo.SendMail(email, opts); err != nil {
 		return err
 	}
 
@@ -337,7 +337,7 @@ func (c *MailForwardCmd) Run(ctx *Context) error {
 		Body:    body,
 	}
 
-	if err := yahoo.SendMail(ctx.ctx, email, opts); err != nil {
+	if err := yahoo.SendMail(email, opts); err != nil {
 		return err
 	}
 

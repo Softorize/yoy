@@ -26,5 +26,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          YOY_CLIENT_ID: ${{ secrets.YOY_CLIENT_ID }}
-          YOY_CLIENT_SECRET: ${{ secrets.YOY_CLIENT_SECRET }}
