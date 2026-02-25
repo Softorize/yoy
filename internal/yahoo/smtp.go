@@ -14,11 +14,11 @@ import (
 	yoyerrors "github.com/Softorize/yoy/internal/errors"
 )
 
-// SendMail sends an email via Yahoo's SMTP server using XOAUTH2 authentication.
+// SendMail sends an email via Yahoo's SMTP server.
 func SendMail(ctx context.Context, email string, opts *SendOptions) error {
-	accessToken, err := auth.GetAccessToken(ctx)
+	creds, err := auth.LoadCredentials()
 	if err != nil {
-		return yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
+		return yoyerrors.Wrap("loading credentials", err, yoyerrors.ExitAuth).
 			WithHint("Run 'yoy auth login' to authenticate.")
 	}
 
@@ -49,11 +49,25 @@ func SendMail(ctx context.Context, email string, opts *SendOptions) error {
 	}
 	defer c.Close()
 
-	// Authenticate with XOAUTH2.
-	xoauth2Client := auth.NewXOAuth2Client(email, accessToken)
-	if err := c.Auth(saslToSMTPAuth(xoauth2Client)); err != nil {
-		return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
-			WithHint("Run 'yoy auth login' to re-authenticate.")
+	// Authenticate based on stored method.
+	switch creds.Method {
+	case auth.AuthMethodAppPassword:
+		plainAuth := smtp.PlainAuth("", email, creds.AppPassword, config.DefaultSMTPHost)
+		if err := c.Auth(plainAuth); err != nil {
+			return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
+				WithHint("Check your app password or generate a new one at https://login.yahoo.com/account/security")
+		}
+	default:
+		accessToken, err := auth.GetAccessToken(ctx)
+		if err != nil {
+			return yoyerrors.Wrap("getting access token", err, yoyerrors.ExitAuth).
+				WithHint("Run 'yoy auth login' to re-authenticate.")
+		}
+		xoauth2Client := auth.NewXOAuth2Client(email, accessToken)
+		if err := c.Auth(saslToSMTPAuth(xoauth2Client)); err != nil {
+			return yoyerrors.Wrap("SMTP authentication failed", err, yoyerrors.ExitAuth).
+				WithHint("Run 'yoy auth login' to re-authenticate.")
+		}
 	}
 
 	// Set sender.
