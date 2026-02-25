@@ -2,7 +2,7 @@
 
 A fast, powerful command-line interface for Yahoo Mail. Read, send, search, and manage your Yahoo Mail directly from the terminal using IMAP/SMTP with secure OAuth2 XOAUTH2 authentication.
 
-Built with Go. Inspired by [GAC](https://github.com/Softorize/gac).
+Built with Go. Inspired by [GAC](https://github.com/Softorize/gac) and [GOG CLI](https://github.com/steipete/gogcli).
 
 ## Features
 
