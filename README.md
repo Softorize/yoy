@@ -1,6 +1,6 @@
 # YOY - Yahoo Mail CLI
 
-A fast, powerful command-line interface for Yahoo Mail. Read, send, search, and manage your Yahoo Mail directly from the terminal using IMAP/SMTP with secure OAuth2 XOAUTH2 authentication.
+A fast, powerful command-line interface for Yahoo Mail. Read, send, search, and manage your Yahoo Mail directly from the terminal using IMAP/SMTP with app password authentication.
 
 Built with Go. Inspired by [GAC](https://github.com/Softorize/gac) and [GOG CLI](https://github.com/steipete/gogcli).
 
@@ -8,7 +8,7 @@ Built with Go. Inspired by [GAC](https://github.com/Softorize/gac) and [GOG CLI]
 
 - **Full mail operations** - list, search, read, send, reply, forward, delete, move, star, mark read/unread
 - **Folder management** - list, create, delete mail folders
-- **Secure OAuth2** - browser-based Yahoo login, tokens stored in system keyring
+- **App Password Auth** - secure app password stored in system keyring
 - **Multiple output formats** - table (default), JSON, plain/TSV
 - **Shell completions** - bash, zsh, fish
 - **Cross-platform** - macOS, Linux, Windows
@@ -17,25 +17,15 @@ Built with Go. Inspired by [GAC](https://github.com/Softorize/gac) and [GOG CLI]
 
 ### GitHub Releases (recommended)
 
-Download a prebuilt binary from [GitHub Releases](https://github.com/Softorize/yoy/releases). These include OAuth credentials and work out of the box.
+Download a prebuilt binary from [GitHub Releases](https://github.com/Softorize/yoy/releases). Works out of the box.
 
 ### From Source
-
-Building from source requires your own Yahoo OAuth2 credentials (see [Yahoo Developer Console](https://developer.yahoo.com/apps/)):
 
 ```bash
 git clone https://github.com/Softorize/yoy.git
 cd yoy
-export YOY_CLIENT_ID=your-client-id
-export YOY_CLIENT_SECRET=your-client-secret
 make build
 sudo cp bin/yoy /usr/local/bin/
-```
-
-Or pass them directly via ldflags:
-
-```bash
-go build -ldflags "-X github.com/Softorize/yoy/internal/auth.oauthClientID=YOUR_ID -X github.com/Softorize/yoy/internal/auth.oauthClientSecret=YOUR_SECRET" .
 ```
 
 ### Verify Installation
@@ -47,25 +37,22 @@ yoy version
 
 ## Quick Start
 
-### 1. Authenticate
+### 1. Generate an App Password
+
+Go to [Yahoo Account Security](https://login.yahoo.com/account/security) and generate an app password for "Other App".
+
+### 2. Authenticate
 
 ```bash
-yoy auth login --email yourname@yahoo.com
+yoy auth login --email yourname@yahoo.com --app-password YOUR_APP_PASSWORD
 ```
 
-This opens your default browser for Yahoo OAuth2 login.
-
-> **Note: Browser security warning**
-> During login, you'll see a "Your connection is not private" warning. This is expected — YOY runs a local HTTPS callback server with a temporary self-signed certificate (required because Yahoo only allows HTTPS redirect URIs). Click **Advanced** → **Proceed to localhost (unsafe)** to complete authentication. This is safe — the server only runs on your machine for the duration of the login.
-
-Once you sign in to Yahoo and authorize the app, you'll see "Authentication successful!" in the browser and the CLI confirms:
-
 ```
-Opening browser for Yahoo authentication...
+App password stored. Verifying IMAP connection...
 Authentication successful.
 ```
 
-### 2. List Your Inbox
+### 3. List Your Inbox
 
 ```bash
 yoy mail list
@@ -82,7 +69,7 @@ UID    Date              From              Subject                              
 
 Unread messages appear in **bold** in terminals that support it.
 
-### 3. Read a Message
+### 4. Read a Message
 
 ```bash
 yoy mail read 45121
@@ -105,7 +92,7 @@ Best,
 Jane
 ```
 
-### 4. Send a Message
+### 5. Send a Message
 
 ```bash
 yoy send --to jane@example.com --subject "Re: Project proposal" --body "Thanks Jane, see you at the meeting!"
@@ -117,7 +104,7 @@ yoy send --to jane@example.com --subject "Re: Project proposal" --body "Thanks J
 
 | Command | Description |
 |---------|-------------|
-| `yoy auth login --email EMAIL` | Authenticate with Yahoo via browser |
+| `yoy auth login --email EMAIL --app-password PASS` | Authenticate with Yahoo |
 | `yoy auth logout` | Remove stored credentials |
 | `yoy auth status` | Show current authentication status |
 
@@ -125,14 +112,13 @@ yoy send --to jane@example.com --subject "Re: Project proposal" --body "Thanks J
 
 ```bash
 # Login
-yoy auth login --email yourname@yahoo.com
+yoy auth login --email yourname@yahoo.com --app-password YOUR_APP_PASSWORD
 
 # Check if you're authenticated
 yoy auth status
 # Status: authenticated
 # Email:  yourname@yahoo.com
-# Expiry: 2026-02-25T05:00:00Z
-# Type:   Bearer
+# Method: app password
 
 # Logout
 yoy auth logout
@@ -312,7 +298,6 @@ yoy config list
 # color_mode      auto
 # default_folder  INBOX
 # mail_limit      25
-# oauth_port      8086
 # output_format   table
 
 # Change default number of messages shown
@@ -406,7 +391,6 @@ Location: `~/Library/Application Support/yoy/config.yaml` (macOS)
 |-----|---------|-------------|
 | `output_format` | `table` | Default output format (`table`, `json`, `plain`) |
 | `color_mode` | `auto` | Color output (`auto`, `always`, `never`) |
-| `oauth_port` | `8086` | Local port for OAuth callback server |
 | `default_folder` | `INBOX` | Default mail folder for all operations |
 | `mail_limit` | `25` | Default number of messages to show in list |
 
@@ -416,7 +400,6 @@ You can edit this file directly or use `yoy config set`:
 # ~/Library/Application Support/yoy/config.yaml
 output_format: table
 color_mode: auto
-oauth_port: 8086
 default_folder: INBOX
 mail_limit: 50
 ```
@@ -431,18 +414,14 @@ mail_limit: 50
 | `YOY_COLOR` | Override color mode |
 | `YOY_OUTPUT_FORMAT` | Override output format |
 | `YOY_CONFIG_DIR` | Custom config directory path |
-| `YOY_CLIENT_ID` | Override OAuth2 client ID |
-| `YOY_CLIENT_SECRET` | Override OAuth2 client secret |
 | `NO_COLOR` | Disable all colors ([no-color.org](https://no-color.org)) |
 
-## Token Storage
+## Credential Storage
 
-Authentication tokens are stored securely:
+App passwords are stored securely:
 
 1. **System keyring** (preferred) - macOS Keychain, GNOME Keyring, Windows Credential Manager
-2. **File fallback** - `~/Library/Application Support/yoy/tokens/default.json` (mode 0600)
-
-Tokens auto-refresh when expired. If refresh fails, run `yoy auth login` again.
+2. **File fallback** - `~/Library/Application Support/yoy/tokens/credentials.json` (mode 0600)
 
 ## Aliases
 
@@ -456,16 +435,9 @@ For convenience, these top-level aliases are available:
 
 ## Building from Source
 
-Building from source requires your own Yahoo OAuth2 credentials. Set them as environment variables before building:
-
 ```bash
-export YOY_CLIENT_ID=your-client-id
-export YOY_CLIENT_SECRET=your-client-secret
-```
-
-Then use Make targets:
-
-```bash
+git clone https://github.com/Softorize/yoy.git
+cd yoy
 make build       # Build to bin/yoy
 make install     # Install to $GOPATH/bin
 make test        # Run tests
@@ -475,17 +447,14 @@ make clean       # Remove build artifacts
 make all         # Format + vet + test + build
 ```
 
-Release binaries from [GitHub Releases](https://github.com/Softorize/yoy/releases) include credentials and work out of the box.
-
 ## Technical Details
 
 - **Protocol**: IMAP (read) + SMTP (send) over TLS
 - **IMAP Server**: `imap.mail.yahoo.com:993`
 - **SMTP Server**: `smtp.mail.yahoo.com:465`
-- **Auth Mechanism**: XOAUTH2 SASL for both IMAP and SMTP
-- **OAuth2 Flow**: Authorization code with browser callback
+- **Auth Mechanism**: LOGIN/PLAIN with app password
 - **CLI Framework**: [Kong](https://github.com/alecthomas/kong)
-- **Token Storage**: [99designs/keyring](https://github.com/99designs/keyring)
+- **Credential Storage**: [99designs/keyring](https://github.com/99designs/keyring)
 
 ## License
 

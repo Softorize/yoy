@@ -17,9 +17,6 @@ type Config struct {
 	// ColorMode controls color output (auto, always, never).
 	ColorMode string `yaml:"color_mode,omitempty"`
 
-	// OAuthPort is the local port for OAuth callback.
-	OAuthPort int `yaml:"oauth_port,omitempty"`
-
 	// DefaultFolder is the default mail folder.
 	DefaultFolder string `yaml:"default_folder,omitempty"`
 
@@ -34,7 +31,6 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		OutputFormat:  DefaultOutputFormat,
 		ColorMode:     DefaultColorMode,
-		OAuthPort:     DefaultOAuthPort,
 		DefaultFolder: DefaultFolder,
 		MailLimit:     DefaultMailLimit,
 		path:          FilePath(),
@@ -84,8 +80,6 @@ func (c *Config) Get(key string) (string, error) {
 		return c.OutputFormat, nil
 	case "color_mode":
 		return c.ColorMode, nil
-	case "oauth_port":
-		return fmt.Sprintf("%d", c.OAuthPort), nil
 	case "default_folder":
 		return c.DefaultFolder, nil
 	case "mail_limit":
@@ -108,12 +102,6 @@ func (c *Config) Set(key, value string) error {
 			return fmt.Errorf("invalid color mode %q: must be auto, always, or never", value)
 		}
 		c.ColorMode = value
-	case "oauth_port":
-		var port int
-		if _, err := fmt.Sscanf(value, "%d", &port); err != nil || port < 1 || port > 65535 {
-			return fmt.Errorf("invalid port %q: must be 1-65535", value)
-		}
-		c.OAuthPort = port
 	case "default_folder":
 		c.DefaultFolder = value
 	case "mail_limit":
@@ -133,7 +121,6 @@ func (c *Config) List() map[string]string {
 	return map[string]string{
 		"output_format":  c.OutputFormat,
 		"color_mode":     c.ColorMode,
-		"oauth_port":     fmt.Sprintf("%d", c.OAuthPort),
 		"default_folder": c.DefaultFolder,
 		"mail_limit":     fmt.Sprintf("%d", c.MailLimit),
 	}
@@ -149,7 +136,6 @@ func ValidKeys() []string {
 	return []string{
 		"output_format",
 		"color_mode",
-		"oauth_port",
 		"default_folder",
 		"mail_limit",
 	}
