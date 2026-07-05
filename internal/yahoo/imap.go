@@ -257,15 +257,25 @@ func (ic *IMAPClient) ReadMessage(folder string, uid uint32) (*Message, error) {
 	return &m, nil
 }
 
-// DeleteMessage marks a message as deleted and expunges.
-func (ic *IMAPClient) DeleteMessage(folder string, uid uint32) error {
+// uidSetFrom builds an IMAP UID set from a slice of UIDs.
+func uidSetFrom(uids []uint32) imap.UIDSet {
+	ids := make([]imap.UID, len(uids))
+	for i, u := range uids {
+		ids[i] = imap.UID(u)
+	}
+	return imap.UIDSetNum(ids...)
+}
+
+// DeleteMessages marks one or more messages as deleted and expunges them.
+func (ic *IMAPClient) DeleteMessages(folder string, uids []uint32) error {
+	if len(uids) == 0 {
+		return nil
+	}
 	if _, err := ic.client.Select(folder, nil).Wait(); err != nil {
 		return yoyerrors.FromIMAPError(err)
 	}
 
-	uidSet := imap.UIDSetNum(imap.UID(uid))
-
-	storeCmd := ic.client.Store(uidSet, &imap.StoreFlags{
+	storeCmd := ic.client.Store(uidSetFrom(uids), &imap.StoreFlags{
 		Op:    imap.StoreFlagsAdd,
 		Flags: []imap.Flag{imap.FlagDeleted},
 	}, nil)
@@ -284,39 +294,59 @@ func (ic *IMAPClient) DeleteMessage(folder string, uid uint32) error {
 	return nil
 }
 
-// MoveMessage moves a message to a different folder.
-func (ic *IMAPClient) MoveMessage(folder string, uid uint32, destFolder string) error {
+// DeleteMessage marks a single message as deleted and expunges it.
+func (ic *IMAPClient) DeleteMessage(folder string, uid uint32) error {
+	return ic.DeleteMessages(folder, []uint32{uid})
+}
+
+// MoveMessages moves one or more messages to a different folder.
+func (ic *IMAPClient) MoveMessages(folder string, uids []uint32, destFolder string) error {
+	if len(uids) == 0 {
+		return nil
+	}
 	if _, err := ic.client.Select(folder, nil).Wait(); err != nil {
 		return yoyerrors.FromIMAPError(err)
 	}
 
-	uidSet := imap.UIDSetNum(imap.UID(uid))
-
-	if _, err := ic.client.Move(uidSet, destFolder).Wait(); err != nil {
+	if _, err := ic.client.Move(uidSetFrom(uids), destFolder).Wait(); err != nil {
 		return yoyerrors.FromIMAPError(err)
 	}
 
 	return nil
 }
 
-// SetFlags sets flags on a message.
-func (ic *IMAPClient) SetFlags(folder string, uid uint32, flags []imap.Flag, add bool) error {
+// MoveMessage moves a single message to a different folder.
+func (ic *IMAPClient) MoveMessage(folder string, uid uint32, destFolder string) error {
+	return ic.MoveMessages(folder, []uint32{uid}, destFolder)
+}
+
+// SetFlagsMulti adds or removes flags on one or more messages.
+func (ic *IMAPClient) SetFlagsMulti(folder string, uids []uint32, flags []imap.Flag, add bool) error {
+	if len(uids) == 0 {
+		return nil
+	}
 	if _, err := ic.client.Select(folder, nil).Wait(); err != nil {
 		return yoyerrors.FromIMAPError(err)
 	}
-
-	uidSet := imap.UIDSetNum(imap.UID(uid))
 
 	op := imap.StoreFlagsAdd
 	if !add {
 		op = imap.StoreFlagsDel
 	}
 
-	storeCmd := ic.client.Store(uidSet, &imap.StoreFlags{
+	storeCmd := ic.client.Store(uidSetFrom(uids), &imap.StoreFlags{
 		Op:    op,
 		Flags: flags,
 	}, nil)
-	return storeCmd.Close()
+	if err := storeCmd.Close(); err != nil {
+		return yoyerrors.FromIMAPError(err)
+	}
+	return nil
+}
+
+// SetFlags adds or removes flags on a single message.
+func (ic *IMAPClient) SetFlags(folder string, uid uint32, flags []imap.Flag, add bool) error {
+	return ic.SetFlagsMulti(folder, []uint32{uid}, flags, add)
 }
 
 // StarMessage adds the \Flagged flag to a message.
@@ -337,6 +367,26 @@ func (ic *IMAPClient) MarkRead(folder string, uid uint32) error {
 // MarkUnread removes the \Seen flag from a message.
 func (ic *IMAPClient) MarkUnread(folder string, uid uint32) error {
 	return ic.SetFlags(folder, uid, []imap.Flag{imap.FlagSeen}, false)
+}
+
+// StarMessages adds the \Flagged flag to one or more messages.
+func (ic *IMAPClient) StarMessages(folder string, uids []uint32) error {
+	return ic.SetFlagsMulti(folder, uids, []imap.Flag{imap.FlagFlagged}, true)
+}
+
+// UnstarMessages removes the \Flagged flag from one or more messages.
+func (ic *IMAPClient) UnstarMessages(folder string, uids []uint32) error {
+	return ic.SetFlagsMulti(folder, uids, []imap.Flag{imap.FlagFlagged}, false)
+}
+
+// MarkReadMulti adds the \Seen flag to one or more messages.
+func (ic *IMAPClient) MarkReadMulti(folder string, uids []uint32) error {
+	return ic.SetFlagsMulti(folder, uids, []imap.Flag{imap.FlagSeen}, true)
+}
+
+// MarkUnreadMulti removes the \Seen flag from one or more messages.
+func (ic *IMAPClient) MarkUnreadMulti(folder string, uids []uint32) error {
+	return ic.SetFlagsMulti(folder, uids, []imap.Flag{imap.FlagSeen}, false)
 }
 
 // messageFromFetchData extracts a Message from IMAP fetch data.

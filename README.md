@@ -157,12 +157,12 @@ yoy auth logout
 | `yoy mail send` | Send a new email |
 | `yoy mail reply UID` | Reply to a message |
 | `yoy mail forward UID` | Forward a message |
-| `yoy mail delete UID` | Delete a message |
-| `yoy mail move UID FOLDER` | Move a message to another folder |
-| `yoy mail star UID` | Star (flag) a message |
+| `yoy mail delete UID...` | Delete one or more messages |
+| `yoy mail move UID... --to FOLDER` | Move one or more messages to another folder |
+| `yoy mail star UID...` | Star (flag) one or more messages |
 | `yoy mail unstar UID` | Remove star from a message |
-| `yoy mail mark-read UID` | Mark a message as read |
-| `yoy mail mark-unread UID` | Mark a message as unread |
+| `yoy mail mark-read UID...` | Mark one or more messages as read |
+| `yoy mail mark-unread UID...` | Mark one or more messages as unread |
 
 #### Listing Messages
 
@@ -263,8 +263,8 @@ yoy mail forward 45121 --to "alice@example.com,bob@example.com" --body "Sharing 
 yoy mail delete 45120
 
 # Move to a folder
-yoy mail move 45121 "Archive"
-yoy mail move 45122 "Work/Projects"
+yoy mail move 45121 --to "Archive"
+yoy mail move 45122 45123 45124 --to "Work/Projects"
 
 # Star / unstar
 yoy mail star 45121
