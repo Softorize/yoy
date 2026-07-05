@@ -99,124 +99,124 @@ func (c *MailReadCmd) Run(ctx *Context) error {
 	return ctx.Formatter().FormatMessage(os.Stdout, message)
 }
 
-// MailDeleteCmd deletes a message.
+// MailDeleteCmd deletes one or more messages.
 type MailDeleteCmd struct {
-	UID uint32 `arg:"" help:"Message UID."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s) to delete."`
 }
 
-// Run deletes a message.
+// Run deletes messages.
 func (c *MailDeleteCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.DeleteMessage(ctx.Folder, c.UID); err != nil {
+	if err := client.DeleteMessages(ctx.Folder, c.UIDs); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d deleted.\n", c.UID)
+	fmt.Printf("Deleted %d message(s).\n", len(c.UIDs))
 	return nil
 }
 
-// MailMoveCmd moves a message to another folder.
+// MailMoveCmd moves one or more messages to another folder.
 type MailMoveCmd struct {
-	UID        uint32 `arg:"" help:"Message UID."`
-	DestFolder string `arg:"" help:"Destination folder."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s) to move."`
+	To   string   `help:"Destination folder." required:""`
 }
 
-// Run moves a message.
+// Run moves messages.
 func (c *MailMoveCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.MoveMessage(ctx.Folder, c.UID, c.DestFolder); err != nil {
+	if err := client.MoveMessages(ctx.Folder, c.UIDs, c.To); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d moved to %s.\n", c.UID, c.DestFolder)
+	fmt.Printf("Moved %d message(s) to %s.\n", len(c.UIDs), c.To)
 	return nil
 }
 
 // MailStarCmd stars a message.
 type MailStarCmd struct {
-	UID uint32 `arg:"" help:"Message UID."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s)."`
 }
 
-// Run stars a message.
+// Run stars messages.
 func (c *MailStarCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.StarMessage(ctx.Folder, c.UID); err != nil {
+	if err := client.StarMessages(ctx.Folder, c.UIDs); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d starred.\n", c.UID)
+	fmt.Printf("Starred %d message(s).\n", len(c.UIDs))
 	return nil
 }
 
 // MailUnstarCmd unstars a message.
 type MailUnstarCmd struct {
-	UID uint32 `arg:"" help:"Message UID."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s)."`
 }
 
-// Run unstars a message.
+// Run unstars messages.
 func (c *MailUnstarCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.UnstarMessage(ctx.Folder, c.UID); err != nil {
+	if err := client.UnstarMessages(ctx.Folder, c.UIDs); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d unstarred.\n", c.UID)
+	fmt.Printf("Unstarred %d message(s).\n", len(c.UIDs))
 	return nil
 }
 
 // MailMarkReadCmd marks a message as read.
 type MailMarkReadCmd struct {
-	UID uint32 `arg:"" help:"Message UID."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s)."`
 }
 
-// Run marks a message as read.
+// Run marks messages as read.
 func (c *MailMarkReadCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.MarkRead(ctx.Folder, c.UID); err != nil {
+	if err := client.MarkReadMulti(ctx.Folder, c.UIDs); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d marked as read.\n", c.UID)
+	fmt.Printf("Marked %d message(s) as read.\n", len(c.UIDs))
 	return nil
 }
 
 // MailMarkUnreadCmd marks a message as unread.
 type MailMarkUnreadCmd struct {
-	UID uint32 `arg:"" help:"Message UID."`
+	UIDs []uint32 `arg:"" name:"uid" help:"Message UID(s)."`
 }
 
-// Run marks a message as unread.
+// Run marks messages as unread.
 func (c *MailMarkUnreadCmd) Run(ctx *Context) error {
 	client, err := ctx.IMAPClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.MarkUnread(ctx.Folder, c.UID); err != nil {
+	if err := client.MarkUnreadMulti(ctx.Folder, c.UIDs); err != nil {
 		return err
 	}
 
-	fmt.Printf("Message %d marked as unread.\n", c.UID)
+	fmt.Printf("Marked %d message(s) as unread.\n", len(c.UIDs))
 	return nil
 }
 
