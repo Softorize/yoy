@@ -110,7 +110,7 @@ func (f *TableFormatter) FormatMessage(w io.Writer, message *yahoo.Message) erro
 		fmt.Fprintf(w, "Attach:  %s\n", strings.Join(names, ", "))
 	}
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, message.Body)
+	fmt.Fprintln(w, message.DisplayBody())
 	return nil
 }
 
