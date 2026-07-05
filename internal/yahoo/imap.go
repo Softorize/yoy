@@ -1,6 +1,7 @@
 package yahoo
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -30,7 +31,7 @@ func NewIMAPClient(ctx context.Context, email string) (*IMAPClient, error) {
 	}
 
 	addr := fmt.Sprintf("%s:%d", config.DefaultIMAPHost, config.DefaultIMAPPort)
-	c, err := imapclient.DialTLS(addr, nil)
+	c, err := imapclient.DialTLS(addr, &imapclient.Options{WordDecoder: newWordDecoder()})
 	if err != nil {
 		return nil, yoyerrors.Wrap("connecting to IMAP server", err, yoyerrors.ExitNetwork).
 			WithHint("Check your internet connection and try again.")
@@ -378,7 +379,7 @@ func messageFromFetchData(msg *imapclient.FetchMessageData) Message {
 			if err != nil {
 				continue
 			}
-			parsed, err := ParseMessage(io.NopCloser(strings.NewReader(string(body))))
+			parsed, err := ParseMessage(bytes.NewReader(body))
 			if err == nil {
 				m.Body = parsed.Body
 				m.HTMLBody = parsed.HTMLBody

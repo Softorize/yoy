@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alecthomas/kong"
 	"github.com/Softorize/yoy/cmd"
 	"github.com/Softorize/yoy/internal/config"
 	yoyerrors "github.com/Softorize/yoy/internal/errors"
+	"github.com/alecthomas/kong"
 )
 
 func main() {

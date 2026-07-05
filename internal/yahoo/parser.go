@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/emersion/go-message/charset"
+	"github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/mail"
 )
 
@@ -173,10 +173,18 @@ func ComposeMessage(opts *SendOptions) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// newWordDecoder returns a MIME word decoder that also understands
+// non-UTF-8 charsets (e.g. ISO-8859-1, Shift_JIS) via go-message's charset
+// support. Used for both IMAP envelope decoding and header decoding.
+func newWordDecoder() *mime.WordDecoder {
+	dec := new(mime.WordDecoder)
+	dec.CharsetReader = charset.Reader
+	return dec
+}
+
 // DecodeRFC2047 decodes RFC 2047 encoded words in a string.
 func DecodeRFC2047(s string) string {
-	dec := new(mime.WordDecoder)
-	decoded, err := dec.DecodeHeader(s)
+	decoded, err := newWordDecoder().DecodeHeader(s)
 	if err != nil {
 		return s
 	}

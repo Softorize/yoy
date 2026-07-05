@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Softorize/yoy/internal/yahoo"
 )
@@ -246,7 +247,7 @@ func (c *MailReplyCmd) Run(ctx *Context) error {
 
 	// Build reply.
 	subject := original.Subject
-	if len(subject) < 4 || subject[:4] != "Re: " {
+	if !strings.HasPrefix(strings.ToLower(subject), "re:") {
 		subject = "Re: " + subject
 	}
 
