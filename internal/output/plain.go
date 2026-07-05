@@ -51,7 +51,7 @@ func (f *PlainFormatter) FormatMessage(w io.Writer, message *yahoo.Message) erro
 	fmt.Fprintf(w, "From\t%s\n", from)
 	fmt.Fprintf(w, "Subject\t%s\n", message.Subject)
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, message.Body)
+	fmt.Fprintln(w, message.DisplayBody())
 	return nil
 }
 

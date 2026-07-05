@@ -35,6 +35,20 @@ type Message struct {
 	References  []string     `json:"references,omitempty"`
 }
 
+// DisplayBody returns the best human-readable plain-text rendering of the
+// message body. When only an HTML body is available (no text/plain part),
+// it is rendered to text. The raw Body/HTMLBody fields are left untouched so
+// JSON output stays lossless.
+func (m *Message) DisplayBody() string {
+	if m.Body != "" && m.Body != m.HTMLBody {
+		return m.Body
+	}
+	if m.HTMLBody != "" {
+		return HTMLToText(m.HTMLBody)
+	}
+	return m.Body
+}
+
 // Folder represents a mail folder.
 type Folder struct {
 	Name     string `json:"name"`

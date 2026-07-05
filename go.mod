@@ -9,6 +9,7 @@ require (
 	github.com/emersion/go-message v0.18.2
 	github.com/mattn/go-isatty v0.0.20
 	github.com/olekukonko/tablewriter v0.0.5
+	golang.org/x/net v0.56.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -23,7 +24,7 @@ require (
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 )
