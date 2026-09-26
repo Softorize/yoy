@@ -224,6 +224,14 @@ yoy mail send \
   --subject "Report" \
   --body "Please find the weekly report attached."
 
+# Send with attachments (repeat --attach for each file)
+yoy mail send \
+  --to recipient@example.com \
+  --subject "Signed documents" \
+  --body "Both files attached." \
+  --attach ./contract.pdf \
+  --attach "./scans/Page 2.jpg"
+
 # Shorthand alias
 yoy send --to friend@example.com --subject "Hey" --body "What's up?"
 ```

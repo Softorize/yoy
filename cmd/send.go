@@ -13,6 +13,7 @@ type SendCmd struct {
 	Body    string   `help:"Email body text." required:""`
 	Cc      []string `help:"CC recipients." sep:","`
 	Bcc     []string `help:"BCC recipients." sep:","`
+	Attach  []string `help:"File to attach (repeat the flag for more files)." type:"existingfile" sep:"none"`
 }
 
 // Run sends the email.
@@ -29,6 +30,8 @@ func (c *SendCmd) Run(ctx *Context) error {
 		Bcc:     c.Bcc,
 		Subject: c.Subject,
 		Body:    c.Body,
+
+		Attachments: c.Attach,
 	}
 
 	if err := yahoo.SendMail(email, opts); err != nil {

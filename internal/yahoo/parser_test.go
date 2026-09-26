@@ -1,6 +1,9 @@
 package yahoo
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -159,5 +162,53 @@ func TestDecodeRFC2047(t *testing.T) {
 		if got := DecodeRFC2047(c.in); got != c.want {
 			t.Errorf("DecodeRFC2047(%q) = %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestComposeMessageWithAttachmentRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Claim 123 - Summons (2 pages).pdf")
+	payload := bytes.Repeat([]byte{0x25, 0x50, 0x44, 0x46, 0x00, 0xff}, 5000)
+	if err := os.WriteFile(path, payload, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := ComposeMessage(&SendOptions{
+		From: "a@yahoo.com", To: []string{"b@example.com"}, Subject: "Docs",
+		Body: "see attached", Attachments: []string{path},
+	})
+	if err != nil {
+		t.Fatalf("ComposeMessage: %v", err)
+	}
+
+	msg, err := ParseMessage(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatalf("ParseMessage: %v", err)
+	}
+	if !strings.Contains(msg.Body, "see attached") {
+		t.Errorf("Body = %q, want it to contain the text", msg.Body)
+	}
+	if len(msg.Attachments) != 1 {
+		t.Fatalf("Attachments = %d, want 1", len(msg.Attachments))
+	}
+	a := msg.Attachments[0]
+	if a.Filename != filepath.Base(path) {
+		t.Errorf("Filename = %q, want %q", a.Filename, filepath.Base(path))
+	}
+	if a.ContentType != "application/pdf" {
+		t.Errorf("ContentType = %q, want application/pdf", a.ContentType)
+	}
+	if a.Size != len(payload) {
+		t.Errorf("Size = %d, want %d", a.Size, len(payload))
+	}
+}
+
+func TestComposeMessageWithoutAttachmentsStaysSinglePart(t *testing.T) {
+	raw, err := ComposeMessage(&SendOptions{From: "a@yahoo.com", To: []string{"b@example.com"}, Subject: "Hi", Body: "hello"})
+	if err != nil {
+		t.Fatalf("ComposeMessage: %v", err)
+	}
+	if bytes.Contains(raw, []byte("multipart/")) {
+		t.Errorf("message without attachments should stay text/plain, got multipart")
 	}
 }
