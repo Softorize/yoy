@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -147,7 +149,6 @@ func ComposeMessage(opts *SendOptions) ([]byte, error) {
 
 	h.SetSubject(opts.Subject)
 	h.SetDate(time.Now())
-	h.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
 
 	if opts.ReplyTo != "" {
 		h.Set("In-Reply-To", opts.ReplyTo)
@@ -157,6 +158,11 @@ func ComposeMessage(opts *SendOptions) ([]byte, error) {
 		h.Set(k, v)
 	}
 
+	if len(opts.Attachments) > 0 {
+		return composeWithAttachments(&buf, h, opts)
+	}
+
+	h.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
 	mw, err := mail.CreateSingleInlineWriter(&buf, h)
 	if err != nil {
 		return nil, fmt.Errorf("creating mail writer: %w", err)
@@ -170,6 +176,66 @@ func ComposeMessage(opts *SendOptions) ([]byte, error) {
 		return nil, fmt.Errorf("closing mail writer: %w", err)
 	}
 
+	return buf.Bytes(), nil
+}
+
+// composeWithAttachments writes a multipart/mixed message: the text body first, then each file
+// in opts.Attachments as a base64 attachment named after the file.
+func composeWithAttachments(buf *bytes.Buffer, h mail.Header, opts *SendOptions) ([]byte, error) {
+	mw, err := mail.CreateWriter(buf, h)
+	if err != nil {
+		return nil, fmt.Errorf("creating mail writer: %w", err)
+	}
+
+	tw, err := mw.CreateInline()
+	if err != nil {
+		return nil, fmt.Errorf("creating body writer: %w", err)
+	}
+	var th mail.InlineHeader
+	th.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
+	bw, err := tw.CreatePart(th)
+	if err != nil {
+		return nil, fmt.Errorf("creating body part: %w", err)
+	}
+	if _, err := io.WriteString(bw, opts.Body); err != nil {
+		return nil, fmt.Errorf("writing body: %w", err)
+	}
+	if err := bw.Close(); err != nil {
+		return nil, fmt.Errorf("closing body part: %w", err)
+	}
+	if err := tw.Close(); err != nil {
+		return nil, fmt.Errorf("closing body writer: %w", err)
+	}
+
+	for _, path := range opts.Attachments {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading attachment %s: %w", path, err)
+		}
+		name := filepath.Base(path)
+		ctype := mime.TypeByExtension(strings.ToLower(filepath.Ext(name)))
+		if ctype == "" {
+			ctype = "application/octet-stream"
+		}
+		var ah mail.AttachmentHeader
+		ah.SetContentType(ctype, nil)
+		ah.SetFilename(name)
+		ah.Set("Content-Transfer-Encoding", "base64")
+		aw, err := mw.CreateAttachment(ah)
+		if err != nil {
+			return nil, fmt.Errorf("creating attachment %s: %w", name, err)
+		}
+		if _, err := aw.Write(data); err != nil {
+			return nil, fmt.Errorf("writing attachment %s: %w", name, err)
+		}
+		if err := aw.Close(); err != nil {
+			return nil, fmt.Errorf("closing attachment %s: %w", name, err)
+		}
+	}
+
+	if err := mw.Close(); err != nil {
+		return nil, fmt.Errorf("closing mail writer: %w", err)
+	}
 	return buf.Bytes(), nil
 }
 

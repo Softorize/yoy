@@ -66,4 +66,6 @@ type SendOptions struct {
 	Body    string
 	ReplyTo string
 	Headers map[string]string
+	// Attachments are file paths sent as attachments after the body.
+	Attachments []string
 }
